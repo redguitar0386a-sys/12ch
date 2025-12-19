@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="Shift_JIS">
+<title>懐かしの超☆掲示板</title>
+
+<style>
+body {
+    background-color: #efefef;
+    font-family: "MS PGothic", Osaka, monospace;
+    font-size: 14px;
+    color: #000;
+}
+
+a { color: #0000ff; text-decoration: underline; }
+a:hover { color: red; }
+
+#container {
+    width: 780px;
+    margin: auto;
+    background: #ffffff;
+    border: 2px solid #999;
+    padding: 10px;
+}
+
+h1 {
+    background: #003366;
+    color: #fff;
+    font-size: 20px;
+    padding: 5px;
+    text-align: center;
+}
+
+.notice {
+    background: #ffffcc;
+    border: 1px solid #999;
+    padding: 5px;
+    font-size: 12px;
+}
+
+.thread {
+    border-top: 2px dashed #999;
+    margin-top: 10px;
+    padding-top: 5px;
+}
+
+.res {
+    margin: 5px 0;
+}
+
+.name { color: green; font-weight: bold; }
+.id { color: #999; font-size: 12px; }
+.time { color: #666; font-size: 12px; }
+
+textarea, input {
+    font-family: "MS PGothic";
+    font-size: 14px;
+}
+
+textarea {
+    width: 100%;
+    height: 80px;
+}
+
+.admin {
+    color: red;
+    font-size: 12px;
+}
+
+.blink {
+    animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+footer {
+    text-align: center;
+    font-size: 12px;
+    margin-top: 20px;
+    color: #666;
+}
+</style>
+</head>
+
+<body>
+<div id="container">
+
+<h1 class="blink">★ 懐かしの超☆掲示板 ★</h1>
+
+<div class="notice">
+※ 荒らし・煽りは完全放置<br>
+※ 個人情報禁止<br>
+※ sage進行推奨<br>
+※ 管理人は見ていないこともない
+</div>
+
+<hr>
+
+<h3>スレッド作成</h3>
+名前：<input id="tname"><br>
+メール：<input id="tmail"><br>
+題名：<input id="ttitle"><br>
+<textarea id="tbody"></textarea><br>
+<button onclick="createThread()">新規スレッド作成</button>
+
+<hr>
+
+<div id="threads"></div>
+
+<footer>
+アクセスカウンタ：<span id="counter"></span><br>
+© 2003-2025 Nostalgic BBS
+</footer>
+
+</div>
+
+<script>
+let threads = JSON.parse(localStorage.getItem("threads") || "[]");
+let counter = localStorage.getItem("counter") || 0;
+counter++;
+localStorage.setItem("counter", counter);
+document.getElementById("counter").innerText = counter;
+
+function genID() {
+    return new Date().toISOString().slice(0,10).replace(/-/g,"") +
+           Math.random().toString(36).slice(2,6);
+}
+
+function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, m =>
+        ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m])
+    );
+}
+
+function render() {
+    const div = document.getElementById("threads");
+    div.innerHTML = "";
+    threads.forEach((t, ti) => {
+        let html = `<div class="thread">
+        <b>${escapeHTML(t.title)}</b><br>`;
+        t.res.forEach((r, ri) => {
+            html += `<div class="res">
+            ${ri+1} 名前：<span class="name">${escapeHTML(r.name)}</span>
+            <span class="time">${r.time}</span>
+            <span class="id">ID:${r.id}</span><br>
+            <pre>${escapeHTML(r.body)}</pre>
+            </div>`;
+        });
+
+        html += `
+        <textarea id="res_${ti}"></textarea><br>
+        名前：<input id="name_${ti}">
+        メール：<input id="mail_${ti}">
+        <button onclick="postRes(${ti})">書き込む</button>
+        </div>`;
+
+        div.innerHTML += html;
+    });
+}
+
+function createThread() {
+    const title = ttitle.value || "無題";
+    const name = tname.value || "名無しさん";
+    const body = tbody.value;
+    if (!body) return alert("本文を書いてください");
+
+    threads.unshift({
+        title,
+        res: [{
+            name,
+            body,
+            time: new Date().toLocaleString(),
+            id: genID()
+        }]
+    });
+    save();
+}
+
+function postRes(i) {
+    const body = document.getElementById(`res_${i}`).value;
+    const name = document.getElementById(`name_${i}`).value || "名無しさん";
+    const mail = document.getElementById(`mail_${i}`).value;
+
+    if (!body) return;
+
+    threads[i].res.push({
+        name,
+        body,
+        time: new Date().toLocaleString(),
+        id: genID()
+    });
+
+    if (mail !== "sage") {
+        const t = threads.splice(i,1)[0];
+        threads.unshift(t);
+    }
+
+    save();
+}
+
+function save() {
+    localStorage.setItem("threads", JSON.stringify(threads));
+    render();
+}
+
+render();
+</script>
+</body>
+</html>
